@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/static/styles.css">
+    <title>Doctor Recommendations</title>
+</head>
+<body>
+    <h1>Recommended Doctors</h1>
+    <ul>
+        {% for doctor in doctors %}
+            <li>
+                <strong>{{ doctor.name }}</strong> - {{ doctor.specialties }}<br>
+                Location: {{ doctor.city }}, {{ doctor.country }}<br>
+                <a href="{{ doctor.profile_link }}" target="_blank">View Profile</a>
+            </li>
+        {% endfor %}
+    </ul>
+    <a href="/">Search Again</a>
+</body>
+</html>

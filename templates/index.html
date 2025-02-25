@@ -1,0 +1,20 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/static/styles.css">
+    <title>Doctor Recommendation</title>
+</head>
+<body>
+    <h1>Find a Doctor</h1>
+    <form action="/recommend" method="post">
+        <label for="specialty">Specialty:</label>
+        <input type="text" id="specialty" name="specialty" required>
+        
+        <label for="location">Location:</label>
+        <input type="text" id="location" name="location" required>
+        
+        <button type="submit">Search</button>
+    </form>
+</body>
+</html>
