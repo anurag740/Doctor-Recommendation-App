@@ -9,19 +9,21 @@
 <body>
 
     <div class="container">
-        <h2>Find Your Doctor</h2>
+        <h1>Find Your Doctor</h1>
+        <p class="subtitle">Search for the best doctors in your area by specialty and location.</p>
+
         <form action="/recommend" method="POST">
-            <label for="specialty">Specialty</label>
-            <input type="text" id="specialty" name="specialty" placeholder="e.g., Cardiologist" required>
-            
-            <label for="location">Location</label>
-            <input type="text" id="location" name="location" placeholder="e.g., New York" required>
-            
-            <button type="submit">🔍 Search</button>
+            <label for="specialty">🔬 Specialty</label>
+            <input type="text" id="specialty" name="specialty" placeholder="e.g., Cardiologist, Dentist, Neurologist" required>
+
+            <label for="location">📍 Location</label>
+            <input type="text" id="location" name="location" placeholder="e.g., New York, Los Angeles, Chicago" required>
+
+            <button type="submit">🔍 Search Doctors</button>
         </form>
 
         {% if error %}
-            <p class="error-message">{{ error }}</p>
+            <p class="error-message">⚠️ {{ error }}</p>
         {% endif %}
     </div>
 
