@@ -8,14 +8,16 @@ from selenium.webdriver.common.by import By
 import time
 import random
 
-# Install Google Chrome & ChromeDriver on Render
+# Install Chrome & ChromeDriver on Render
 if "RENDER" in os.environ:
     subprocess.run("curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", shell=True)
     subprocess.run("sudo dpkg -i /tmp/chrome.deb; sudo apt-get -f install -y", shell=True)
+
     subprocess.run("curl -Lo /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.111/linux64/chromedriver-linux64.zip", shell=True)
     subprocess.run("unzip /tmp/chromedriver.zip -d /tmp", shell=True)
     subprocess.run("sudo mv /tmp/chromedriver-linux64/chromedriver /usr/bin/chromedriver", shell=True)
     subprocess.run("sudo chmod +x /usr/bin/chromedriver", shell=True)
+
     os.environ["GOOGLE_CHROME_BIN"] = "/usr/bin/google-chrome"
     os.environ["CHROMEDRIVER_PATH"] = "/usr/bin/chromedriver"
 
