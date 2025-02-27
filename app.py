@@ -14,12 +14,27 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Ensure Chrome & ChromeDriver are installed
-chromedriver_autoinstaller.install()
+# Ensure Chrome is installed on Render
+def install_chrome():
+    if not os.path.exists("/usr/bin/google-chrome"):
+        logger.info("Installing Google Chrome...")
+        subprocess.run(
+            "curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb",
+            shell=True, check=True)
+        subprocess.run("sudo dpkg -i /tmp/chrome.deb || sudo apt-get -f install -y", shell=True, check=True)
+        os.environ["GOOGLE_CHROME_BIN"] = "/usr/bin/google-chrome"
+    else:
+        logger.info("Google Chrome is already installed.")
 
-# Set Chrome binary path on Render
 if "RENDER" in os.environ:
-    os.environ["GOOGLE_CHROME_BIN"] = "/usr/bin/google-chrome"
+    install_chrome()
+
+# Ensure ChromeDriver is installed
+try:
+    chromedriver_autoinstaller.install()
+    logger.info("ChromeDriver installed successfully.")
+except Exception as e:
+    logger.error(f"Error installing ChromeDriver: {e}")
 
 app = Flask(__name__)
 
@@ -40,8 +55,8 @@ def scrape_doctors(specialty, location):
     if "RENDER" in os.environ:
         options.binary_location = os.environ["GOOGLE_CHROME_BIN"]
 
+    driver = None
     try:
-        # Start WebDriver
         driver = webdriver.Chrome(options=options)
         logger.info("ChromeDriver started successfully.")
 
@@ -105,7 +120,7 @@ def scrape_doctors(specialty, location):
         return []
 
     finally:
-        if 'driver' in locals():
+        if driver:
             driver.quit()
             logger.info("ChromeDriver closed.")
 
