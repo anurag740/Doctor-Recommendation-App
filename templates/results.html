@@ -1,20 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <link rel="stylesheet" href="/static/styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <title>Doctor Recommendations</title>
 </head>
 <body>
-    <h1>Recommended Doctors</h1>
-    <ul>
-        {% for doctor in doctors %}
-            <li>
-                <strong>{{ doctor.name }}</strong> - {{ doctor.specialties }}<br>
-                Location: {{ doctor.city }}, {{ doctor.country }}<br>
-                <a href="{{ doctor.profile_link }}" target="_blank">View Profile</a>
-            </li>
-        {% endfor %}
-    </ul>
-    <a href="/">Search Again</a>
+
+    <div class="container">
+        <h2>Recommended Doctors</h2>
+        <a href="/" class="back-btn">🔙 Search Again</a>
+        <hr>
+
+        {% if doctors %}
+            <div class="doctor-grid">
+                {% for doctor in doctors %}
+                    <div class="doctor-card">
+                        <h3>{{ doctor.name }}</h3>
+                        <p>⭐ <strong>Rating:</strong> {{ doctor.rating }} ({{ doctor.reviews }} reviews)</p>
+                        <p>📍 <strong>Address:</strong> {{ doctor.address }}</p>
+                        <p>🕒 <strong>Status:</strong> {{ doctor.status }}</p>
+
+                        {% if doctor.website != "N/A" %}
+                            <p>🔗 <a href="{{ doctor.website }}" target="_blank" class="website-link">Visit Website</a></p>
+                        {% else %}
+                            <p>🚫 <span class="no-website">No Website Available</span></p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-results">❌ No doctors found. Try again with different inputs.</p>
+        {% endif %}
+    </div>
+
 </body>
 </html>
