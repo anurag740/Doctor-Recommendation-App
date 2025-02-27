@@ -1,9 +1,7 @@
 import os
-import subprocess
 import chromedriver_autoinstaller
 from flask import Flask, render_template, request
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 import time
@@ -14,27 +12,13 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Ensure Chrome is installed on Render
-def install_chrome():
-    if not os.path.exists("/usr/bin/google-chrome"):
-        logger.info("Installing Google Chrome...")
-        subprocess.run(
-            "curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb",
-            shell=True, check=True)
-        subprocess.run("sudo dpkg -i /tmp/chrome.deb || sudo apt-get -f install -y", shell=True, check=True)
-        os.environ["GOOGLE_CHROME_BIN"] = "/usr/bin/google-chrome"
-    else:
-        logger.info("Google Chrome is already installed.")
-
+# Set Chrome & Chromedriver paths for Render
 if "RENDER" in os.environ:
-    install_chrome()
+    os.environ["GOOGLE_CHROME_BIN"] = "/opt/render/.local/bin/google-chrome-stable"
+    os.environ["CHROMEDRIVER_BIN"] = "/opt/render/.local/bin/chromedriver"
 
 # Ensure ChromeDriver is installed
-try:
-    chromedriver_autoinstaller.install()
-    logger.info("ChromeDriver installed successfully.")
-except Exception as e:
-    logger.error(f"Error installing ChromeDriver: {e}")
+chromedriver_autoinstaller.install()
 
 app = Flask(__name__)
 
@@ -44,12 +28,10 @@ def scrape_doctors(specialty, location):
 
     options = Options()
     options.add_argument("--no-sandbox")
-    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--headless")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--remote-debugging-port=9222")
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option("useAutomationExtension", False)
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     if "RENDER" in os.environ:
@@ -57,7 +39,11 @@ def scrape_doctors(specialty, location):
 
     driver = None
     try:
-        driver = webdriver.Chrome(options=options)
+        service = None
+        if "RENDER" in os.environ:
+            service = webdriver.ChromeService(executable_path=os.environ["CHROMEDRIVER_BIN"])
+
+        driver = webdriver.Chrome(service=service, options=options)
         logger.info("ChromeDriver started successfully.")
 
         driver.get(google_url)
@@ -79,7 +65,7 @@ def scrape_doctors(specialty, location):
         results = []
         doctor_containers = driver.find_elements(By.CSS_SELECTOR, "div[jsname='MZArnb']")
 
-        for container in doctor_containers[:20]:  # Get up to 20 results
+        for container in doctor_containers[:20]:
             try:
                 name = container.find_element(By.CSS_SELECTOR, "div.dbg0pd span.OSrXXb").text
             except:
