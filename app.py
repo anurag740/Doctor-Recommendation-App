@@ -8,16 +8,19 @@ from selenium.webdriver.common.by import By
 import time
 import random
 
-# Install Chrome in Render Deployment Environment
+# Install Chrome & ChromeDriver on Render
 if "RENDER" in os.environ:
     subprocess.run("curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", shell=True)
     subprocess.run("sudo dpkg -i /tmp/chrome.deb; sudo apt-get -f install -y", shell=True)
+    subprocess.run("curl -Lo /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.111/linux64/chromedriver-linux64.zip", shell=True)
+    subprocess.run("unzip /tmp/chromedriver.zip -d /tmp", shell=True)
     os.environ["GOOGLE_CHROME_BIN"] = "/usr/bin/google-chrome"
+    os.environ["CHROMEDRIVER_PATH"] = "/tmp/chromedriver-linux64/chromedriver"
 
 app = Flask(__name__)
 
-# Set ChromeDriver Path for Render
-CHROMEDRIVER_PATH = "/usr/bin/chromedriver" if "RENDER" in os.environ else "C:/Users/LENOVO/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe"
+# Set ChromeDriver Path
+CHROMEDRIVER_PATH = os.environ.get("CHROMEDRIVER_PATH", "C:/Users/LENOVO/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe")
 
 def scrape_doctors(specialty, location):
     search_query = f"{specialty} doctors in {location}"
@@ -33,7 +36,7 @@ def scrape_doctors(specialty, location):
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     if "RENDER" in os.environ:
-        options.binary_location = "/usr/bin/google-chrome"
+        options.binary_location = os.environ["GOOGLE_CHROME_BIN"]
 
     service = Service(CHROMEDRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
@@ -58,7 +61,7 @@ def scrape_doctors(specialty, location):
         results = []
         doctor_containers = driver.find_elements(By.CSS_SELECTOR, "div[jsname='MZArnb']")
 
-        for container in doctor_containers[:20]:  # Get up to 10 results
+        for container in doctor_containers[:20]:  # Get up to 20 results
             try:
                 name = container.find_element(By.CSS_SELECTOR, "div.dbg0pd span.OSrXXb").text
             except:
