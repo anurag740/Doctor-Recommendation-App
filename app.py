@@ -1,24 +1,31 @@
 import os
-import chromedriver_autoinstaller
-from flask import Flask, render_template, request
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 import time
 import random
 import logging
+import subprocess
+from flask import Flask, render_template, request
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Set Chrome & Chromedriver paths for Render
-if "RENDER" in os.environ:
-    os.environ["GOOGLE_CHROME_BIN"] = "/opt/render/.local/bin/google-chrome-stable"
-    os.environ["CHROMEDRIVER_BIN"] = "/opt/render/.local/bin/chromedriver"
+# Manually set Chrome & Chromedriver paths for Render
+CHROME_PATH = "/opt/render/.local/bin/google-chrome-stable"
+CHROMEDRIVER_PATH = "/opt/render/.local/bin/chromedriver"
 
-# Ensure ChromeDriver is installed
-chromedriver_autoinstaller.install()
+# Check if running on Render
+ON_RENDER = "RENDER" in os.environ
+
+# Ensure Chrome & Chromedriver exist
+if ON_RENDER:
+    if not os.path.exists(CHROME_PATH):
+        raise ValueError("Google Chrome not found at expected path.")
+    if not os.path.exists(CHROMEDRIVER_PATH):
+        raise ValueError("Chromedriver not found at expected path.")
 
 app = Flask(__name__)
 
@@ -27,29 +34,27 @@ def scrape_doctors(specialty, location):
     google_url = f"https://www.google.com/search?q={search_query}&tbm=lcl"
 
     options = Options()
-    options.add_argument("--no-sandbox")
     options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--remote-debugging-port=9222")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-    if "RENDER" in os.environ:
-        options.binary_location = os.environ["GOOGLE_CHROME_BIN"]
+    # Set Chrome binary location
+    if ON_RENDER:
+        options.binary_location = CHROME_PATH
 
-    driver = None
+    # Setup Chrome WebDriver
+    service = Service(CHROMEDRIVER_PATH) if ON_RENDER else None
+    driver = webdriver.Chrome(service=service, options=options)
+
     try:
-        service = None
-        if "RENDER" in os.environ:
-            service = webdriver.ChromeService(executable_path=os.environ["CHROMEDRIVER_BIN"])
-
-        driver = webdriver.Chrome(service=service, options=options)
-        logger.info("ChromeDriver started successfully.")
-
+        logger.info("Opening Google search results...")
         driver.get(google_url)
         time.sleep(random.uniform(3, 6))
 
-        # Click "More places" button if available
+        # Try clicking "More places" button if available
         try:
             more_button = driver.find_element(By.CSS_SELECTOR, "g-more-link a")
             driver.execute_script("arguments[0].click();", more_button)
@@ -106,9 +111,8 @@ def scrape_doctors(specialty, location):
         return []
 
     finally:
-        if driver:
-            driver.quit()
-            logger.info("ChromeDriver closed.")
+        driver.quit()
+        logger.info("ChromeDriver closed.")
 
 @app.route("/")
 def home():
@@ -120,12 +124,11 @@ def recommend():
         specialty = request.form["specialty"]
         location = request.form["location"]
         doctors = scrape_doctors(specialty, location)
-        if not doctors:
-            logger.warning("No doctors found or scraping failed.")
         return render_template("results.html", doctors=doctors)
     except Exception as e:
         logger.error(f"Internal Server Error: {e}")
         return f"Internal Server Error: {e}", 500
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
