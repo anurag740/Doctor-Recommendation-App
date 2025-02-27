@@ -8,14 +8,16 @@ from selenium.webdriver.common.by import By
 import time
 import random
 
-# Install Chrome & ChromeDriver on Render
+# Install Google Chrome & ChromeDriver on Render
 if "RENDER" in os.environ:
     subprocess.run("curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", shell=True)
     subprocess.run("sudo dpkg -i /tmp/chrome.deb; sudo apt-get -f install -y", shell=True)
     subprocess.run("curl -Lo /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.111/linux64/chromedriver-linux64.zip", shell=True)
     subprocess.run("unzip /tmp/chromedriver.zip -d /tmp", shell=True)
+    subprocess.run("sudo mv /tmp/chromedriver-linux64/chromedriver /usr/bin/chromedriver", shell=True)
+    subprocess.run("sudo chmod +x /usr/bin/chromedriver", shell=True)
     os.environ["GOOGLE_CHROME_BIN"] = "/usr/bin/google-chrome"
-    os.environ["CHROMEDRIVER_PATH"] = "/tmp/chromedriver-linux64/chromedriver"
+    os.environ["CHROMEDRIVER_PATH"] = "/usr/bin/chromedriver"
 
 app = Flask(__name__)
 
@@ -31,6 +33,8 @@ def scrape_doctors(specialty, location):
     options.add_argument("--headless")  # Run Chrome in headless mode
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--remote-debugging-port=9222")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
