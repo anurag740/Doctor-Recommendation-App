@@ -1,3 +1,5 @@
+import os  
+import subprocess
 from flask import Flask, render_template, request
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -6,7 +8,13 @@ from selenium.webdriver.common.by import By
 import time
 import random
 
+if "RENDER" in os.environ:
+    subprocess.run("curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", shell=True)
+    subprocess.run("sudo dpkg -i /tmp/chrome.deb; sudo apt-get -f install -y", shell=True)
+    
+
 app = Flask(__name__)
+
 
 # Path to ChromeDriver
 CHROMEDRIVER_PATH = "C:/Users/LENOVO/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe"
