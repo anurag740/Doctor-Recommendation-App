@@ -10,32 +10,26 @@ import random
 
 app = Flask(__name__)
 
-
-import os  
-import subprocess
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-
-# ✅ Install Chrome & ChromeDriver on Render
 if "RENDER" in os.environ:
-    # Install Chrome
+    # 1️⃣ Download & Install Chrome
     subprocess.run(
-        "curl -o /tmp/chrome-linux64.tar.xz https://dl.google.com/linux/chrome/linux_signing_key.pub && tar -xf /tmp/chrome-linux64.tar.xz -C /tmp/",
+        "wget -q -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && "
+        "apt-get update && apt-get install -y /tmp/google-chrome.deb",
         shell=True,
     )
-    os.environ["GOOGLE_CHROME_BIN"] = "/tmp/chrome-linux64/chrome"
+    os.environ["GOOGLE_CHROME_BIN"] = "/usr/bin/google-chrome"
 
-    # Install ChromeDriver
+    # 2️⃣ Download & Extract ChromeDriver
     subprocess.run(
-        "wget -q -O /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.57/linux64/chromedriver-linux64.zip && unzip /tmp/chromedriver.zip -d /tmp/",
+        "wget -q -O /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.57/linux64/chromedriver-linux64.zip && "
+        "unzip -o /tmp/chromedriver.zip -d /tmp/",
         shell=True,
     )
 
 # ✅ Detect Environment & Set Paths
 if "RENDER" in os.environ:
     CHROMEDRIVER_PATH = "/tmp/chromedriver-linux64/chromedriver"  # Render Deployment
-    CHROME_BINARY_PATH = os.environ.get("GOOGLE_CHROME_BIN", "/tmp/chrome-linux64/chrome")
+    CHROME_BINARY_PATH = os.environ.get("GOOGLE_CHROME_BIN", "/usr/bin/google-chrome")
 else:
     CHROMEDRIVER_PATH = "C:/Users/LENOVO/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe"  # Local Windows Path
     CHROME_BINARY_PATH = "C:/Program Files/Google/Chrome/Application/chrome.exe"  # Update if needed
@@ -57,7 +51,6 @@ def scrape_doctors(specialty, location):
 
     service = Service(CHROMEDRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
-
 
     try:
         driver.get(google_url)
