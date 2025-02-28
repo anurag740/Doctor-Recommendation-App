@@ -8,24 +8,29 @@ from selenium.webdriver.common.by import By
 import time
 import random
 
-# Flask app
 app = Flask(__name__)
 
-# Set paths dynamically
-CHROMEDRIVER_PATH = os.getenv("CHROMEDRIVER_PATH", "/usr/bin/chromedriver")
-GOOGLE_CHROME_BIN = os.getenv("GOOGLE_CHROME_BIN", "/usr/bin/google-chrome")
+# 🛠 Install Chrome & ChromeDriver in Render Deployment
+if "RENDER" in os.environ:
+    subprocess.run("curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", shell=True)
+    subprocess.run("sudo dpkg -i /tmp/chrome.deb; sudo apt-get -f install -y", shell=True)
+    subprocess.run("wget -q -O /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.57/linux64/chromedriver-linux64.zip && unzip /tmp/chromedriver.zip -d /tmp/", shell=True)
+
+# ✅ Detect Environment & Set ChromeDriver Path
+if "RENDER" in os.environ:
+    CHROMEDRIVER_PATH = "/tmp/chromedriver-linux64/chromedriver"  # Render Deployment
+else:
+    CHROMEDRIVER_PATH = "C:/Users/LENOVO/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe"  # Local Windows Path
 
 def scrape_doctors(specialty, location):
     search_query = f"{specialty} doctors in {location}"
     google_url = f"https://www.google.com/search?q={search_query}&tbm=lcl"
 
+    # ✅ Set Chrome Options for Headless Scraping
     options = Options()
-    options.binary_location = GOOGLE_CHROME_BIN  # Set Chrome binary path
     options.add_argument("--no-sandbox")
-    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--headless")  
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--remote-debugging-port=9222")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option("useAutomationExtension", False)
@@ -38,18 +43,23 @@ def scrape_doctors(specialty, location):
         driver.get(google_url)
         time.sleep(random.uniform(3, 6))
 
-        # Click "More places" button if available
+        # 🔍 Click "More places" button if available
         try:
             more_button = driver.find_element(By.CSS_SELECTOR, "g-more-link a")
             driver.execute_script("arguments[0].click();", more_button)
             time.sleep(random.uniform(3, 5))
         except:
-            print("No 'More places' button found.")
+            try:
+                more_button = driver.find_element(By.CSS_SELECTOR, "div[jsname='c1gLCb'] span.LGwnxb")
+                driver.execute_script("arguments[0].click();", more_button)
+                time.sleep(random.uniform(3, 5))
+            except:
+                print("No 'More places' button found.")
 
         results = []
         doctor_containers = driver.find_elements(By.CSS_SELECTOR, "div[jsname='MZArnb']")
 
-        for container in doctor_containers[:20]:  
+        for container in doctor_containers[:20]:  # Get up to 10 results
             try:
                 name = container.find_element(By.CSS_SELECTOR, "div.dbg0pd span.OSrXXb").text
             except:
@@ -92,21 +102,17 @@ def scrape_doctors(specialty, location):
     finally:
         driver.quit()
 
+
 @app.route("/")
 def home():
     return render_template("index.html")
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
-    try:
-        specialty = request.form["specialty"]
-        location = request.form["location"]
-        doctors = scrape_doctors(specialty, location)
-        return render_template("results.html", doctors=doctors)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return f"Internal Server Error: {str(e)}", 500
+    specialty = request.form["specialty"]
+    location = request.form["location"]
+    doctors = scrape_doctors(specialty, location)
+    return render_template("results.html", doctors=doctors)
 
 if __name__ == "__main__":
     app.run(debug=True)
