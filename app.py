@@ -11,16 +11,24 @@ import random
 app = Flask(__name__)
 
 # 🛠 Install Chrome & ChromeDriver in Render Deployment
+import os  
+import subprocess
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+
+# ✅ Install Chrome & ChromeDriver on Render
 if "RENDER" in os.environ:
-    subprocess.run("curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb", shell=True)
-    subprocess.run("sudo dpkg -i /tmp/chrome.deb; sudo apt-get -f install -y", shell=True)
+    # Install Chrome without `sudo`
+    subprocess.run("curl -o /tmp/chrome-linux64.tar.xz https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_122.0.6261.57-1_amd64.deb", shell=True)
+    subprocess.run("tar -xf /tmp/chrome-linux64.tar.xz -C /tmp/", shell=True)
+    os.environ["GOOGLE_CHROME_BIN"] = "/tmp/chrome-linux64/chrome"
+
+    # Install ChromeDriver
     subprocess.run("wget -q -O /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.57/linux64/chromedriver-linux64.zip && unzip /tmp/chromedriver.zip -d /tmp/", shell=True)
 
 # ✅ Detect Environment & Set ChromeDriver Path
-if "RENDER" in os.environ:
-    CHROMEDRIVER_PATH = "/tmp/chromedriver-linux64/chromedriver"  # Render Deployment
-else:
-    CHROMEDRIVER_PATH = "C:/Users/LENOVO/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe"  # Local Windows Path
+CHROMEDRIVER_PATH = "/tmp/chromedriver-linux64/chromedriver" if "RENDER" in os.environ else "C:/Users/LENOVO/Downloads/chromedriver-win64/chromedriver.exe"
 
 def scrape_doctors(specialty, location):
     search_query = f"{specialty} doctors in {location}"
@@ -28,6 +36,7 @@ def scrape_doctors(specialty, location):
 
     # ✅ Set Chrome Options for Headless Scraping
     options = Options()
+    options.binary_location = os.environ.get("GOOGLE_CHROME_BIN", "/usr/bin/google-chrome")
     options.add_argument("--no-sandbox")
     options.add_argument("--headless")  
     options.add_argument("--disable-dev-shm-usage")
@@ -38,6 +47,7 @@ def scrape_doctors(specialty, location):
 
     service = Service(CHROMEDRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
+
 
     try:
         driver.get(google_url)
