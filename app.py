@@ -23,10 +23,14 @@ def scrape_doctors(specialty, location):
     google_url = f"https://www.google.com/search?q={search_query}&tbm=lcl"
 
     options = Options()
-    options.binary_location = CHROME_BINARY_PATH  # Set Chrome binary location
-    options.add_argument("--headless")  # Run in headless mode
+    options.binary_location = CHROME_BINARY_PATH  # Explicitly set Chrome binary path
     options.add_argument("--no-sandbox")
+    options.add_argument("--headless")  
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option("useAutomationExtension", False)
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     service = Service(CHROMEDRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
 
