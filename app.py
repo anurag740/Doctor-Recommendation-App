@@ -1,31 +1,44 @@
 import os
-import time
-import random
-import logging
+import platform
 import subprocess
+import chromedriver_autoinstaller
 from flask import Flask, render_template, request
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+import time
+import random
+import logging
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Manually set Chrome & Chromedriver paths for Render
-CHROME_PATH = "/opt/render/.local/bin/google-chrome-stable"
-CHROMEDRIVER_PATH = "/opt/render/.local/bin/chromedriver"
+# Define paths
+IS_WINDOWS = platform.system() == "Windows"
+CHROME_PATH = "C:/Program Files/Google/Chrome/Application/chrome.exe" if IS_WINDOWS else "/opt/render/.local/bin/google-chrome"
+CHROMEDRIVER_PATH = chromedriver_autoinstaller.install()
 
-# Check if running on Render
-ON_RENDER = "RENDER" in os.environ
+def install_chrome():
+    """Installs Chrome only if running on Render (Linux). Skips on Windows."""
+    if IS_WINDOWS:
+        logger.info("Skipping Chrome installation on Windows.")
+        return
 
-# Ensure Chrome & Chromedriver exist
-if ON_RENDER:
     if not os.path.exists(CHROME_PATH):
-        raise ValueError("Google Chrome not found at expected path.")
-    if not os.path.exists(CHROMEDRIVER_PATH):
-        raise ValueError("Chromedriver not found at expected path.")
+        logger.info("Installing Google Chrome...")
+        subprocess.run(
+            "wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb && "
+            "dpkg -x /tmp/chrome.deb /tmp/chrome && "
+            "mkdir -p /opt/render/.local/bin && "
+            "mv /tmp/chrome/opt/google/chrome/google-chrome /opt/render/.local/bin/google-chrome",
+            shell=True,
+            check=True
+        )
+        logger.info("Google Chrome installed successfully.")
+
+install_chrome()
 
 app = Flask(__name__)
 
@@ -34,38 +47,22 @@ def scrape_doctors(specialty, location):
     google_url = f"https://www.google.com/search?q={search_query}&tbm=lcl"
 
     options = Options()
-    options.add_argument("--headless")
     options.add_argument("--no-sandbox")
+    options.add_argument("--headless")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--remote-debugging-port=9222")
     options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
-    # Set Chrome binary location
-    if ON_RENDER:
+    if not IS_WINDOWS:
         options.binary_location = CHROME_PATH
 
-    # Setup Chrome WebDriver
-    service = Service(CHROMEDRIVER_PATH) if ON_RENDER else None
+    service = Service(CHROMEDRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
 
     try:
-        logger.info("Opening Google search results...")
         driver.get(google_url)
         time.sleep(random.uniform(3, 6))
-
-        # Try clicking "More places" button if available
-        try:
-            more_button = driver.find_element(By.CSS_SELECTOR, "g-more-link a")
-            driver.execute_script("arguments[0].click();", more_button)
-            time.sleep(random.uniform(3, 5))
-        except:
-            try:
-                more_button = driver.find_element(By.CSS_SELECTOR, "div[jsname='c1gLCb'] span.LGwnxb")
-                driver.execute_script("arguments[0].click();", more_button)
-                time.sleep(random.uniform(3, 5))
-            except:
-                logger.info("No 'More places' button found.")
 
         results = []
         doctor_containers = driver.find_elements(By.CSS_SELECTOR, "div[jsname='MZArnb']")
@@ -106,13 +103,8 @@ def scrape_doctors(specialty, location):
 
         return results
 
-    except Exception as e:
-        logger.error(f"Error during scraping: {e}")
-        return []
-
     finally:
         driver.quit()
-        logger.info("ChromeDriver closed.")
 
 @app.route("/")
 def home():
@@ -120,15 +112,10 @@ def home():
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
-    try:
-        specialty = request.form["specialty"]
-        location = request.form["location"]
-        doctors = scrape_doctors(specialty, location)
-        return render_template("results.html", doctors=doctors)
-    except Exception as e:
-        logger.error(f"Internal Server Error: {e}")
-        return f"Internal Server Error: {e}", 500
+    specialty = request.form["specialty"]
+    location = request.form["location"]
+    doctors = scrape_doctors(specialty, location)
+    return render_template("results.html", doctors=doctors)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(debug=True)
