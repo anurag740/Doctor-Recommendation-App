@@ -10,11 +10,12 @@ import random
 
 app = Flask(__name__)
 
+
+# ✅ Install Chrome & ChromeDriver on Render
 if "RENDER" in os.environ:
-    # 1️⃣ Download & Install Chrome
+    # 1️⃣ Install Chrome Properly
     subprocess.run(
-        "wget -q -O /tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && "
-        "apt-get update && apt-get install -y /tmp/google-chrome.deb",
+        "apt-get update && apt-get install -y wget unzip google-chrome-stable",
         shell=True,
     )
     os.environ["GOOGLE_CHROME_BIN"] = "/usr/bin/google-chrome"
@@ -28,7 +29,7 @@ if "RENDER" in os.environ:
 
 # ✅ Detect Environment & Set Paths
 if "RENDER" in os.environ:
-    CHROMEDRIVER_PATH = "/tmp/chromedriver-linux64/chromedriver"  # Render Deployment
+    CHROMEDRIVER_PATH = "/tmp/chromedriver-linux64/chromedriver"  # Render Path
     CHROME_BINARY_PATH = os.environ.get("GOOGLE_CHROME_BIN", "/usr/bin/google-chrome")
 else:
     CHROMEDRIVER_PATH = "C:/Users/LENOVO/Downloads/chromedriver-win64/chromedriver-win64/chromedriver.exe"  # Local Windows Path
@@ -38,9 +39,9 @@ def scrape_doctors(specialty, location):
     search_query = f"{specialty} doctors in {location}"
     google_url = f"https://www.google.com/search?q={search_query}&tbm=lcl"
 
-    # ✅ Set Chrome Options for Headless Scraping
+    # ✅ Configure Chrome Options
     options = Options()
-    options.binary_location = CHROME_BINARY_PATH  # ✅ Correct binary path for both environments
+    options.binary_location = CHROME_BINARY_PATH  # ✅ Ensure correct Chrome path
     options.add_argument("--no-sandbox")
     options.add_argument("--headless")  
     options.add_argument("--disable-dev-shm-usage")
@@ -51,6 +52,7 @@ def scrape_doctors(specialty, location):
 
     service = Service(CHROMEDRIVER_PATH)
     driver = webdriver.Chrome(service=service, options=options)
+
 
     try:
         driver.get(google_url)
